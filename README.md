@@ -1,0 +1,1 @@
+**All new features described at docs, all previous features still working**
