@@ -50,7 +50,7 @@ User 1 → * Comment (автор комментариев)
 News 1 → * Comment (комментарии к новости)
 
 Каскадное удаление реализовано через cascade="all, delete-orphan" в отношениях.
-ASCII-диаграмма моделей:
+диаграмма моделей -
 textUser (id, name, email, registration_date, is_author_verified, avatar)
 ├── 1 --- * News (id, title, content: JSON, publication_date, author_id, cover)
 │   └── 1 --- * Comment (id, text, news_id, author_id, publication_date)
