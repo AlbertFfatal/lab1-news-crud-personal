@@ -9,6 +9,8 @@ from app.dependencies import get_current_user
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
+from schemas import UserRegister, UserLogin
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 # GitHub SSO (локальный тест с allow_insecure_http=True)
@@ -20,8 +22,9 @@ github_sso = GithubSSO(
 )
 
 # Local register
+# Local register
 @router.post("/register")
-def register(user_create: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(user_create: UserRegister, db: Session = Depends(get_db)):
     if crud.get_user_by_email(db, user_create.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = hash_password(user_create.password)
@@ -29,8 +32,9 @@ def register(user_create: schemas.UserCreate, db: Session = Depends(get_db)):
         name=user_create.name,
         email=user_create.email,
         password_hash=hashed,
-        is_author_verified=user_create.is_author_verified or False,
-        is_admin=user_create.is_admin or False
+        is_author_verified=user_create.is_author_verified,
+        is_admin=user_create.is_admin,
+        avatar=user_create.avatar
     )
     db.add(new_user)
     db.commit()
@@ -39,7 +43,7 @@ def register(user_create: schemas.UserCreate, db: Session = Depends(get_db)):
 
 # Local login
 @router.post("/login")
-def login(user_login: schemas.UserLogin, db: Session = Depends(get_db), request: Request = None):
+def login(user_login: UserLogin, db: Session = Depends(get_db), request: Request = None):
     user = crud.get_user_by_email(db, user_login.email)
     if not user or not verify_password(user_login.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -55,7 +59,6 @@ def login(user_login: schemas.UserLogin, db: Session = Depends(get_db), request:
     db.add(refresh_session)
     db.commit()
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
-
 # GitHub OAuth
 @router.get("/github/login")
 async def github_login():

@@ -64,10 +64,6 @@ class CommentOut(CommentBase):
     class Config:
         from_attributes = True
 
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
 class Token(BaseModel):
     access_token: str
     refresh_token: str
@@ -76,3 +72,15 @@ class Token(BaseModel):
 class UserRoleUpdate(BaseModel):
     is_author_verified: Optional[bool] = None
     is_admin: Optional[bool] = None
+
+class UserRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    is_author_verified: Optional[bool] = False
+    is_admin: Optional[bool] = False
+    avatar: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str

@@ -102,3 +102,6 @@ def delete_comment(db: Session, comment_id: int) -> Optional[models.Comment]:
         db.delete(db_comment)
         db.commit()
     return db_comment
+
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.email == email).first()
