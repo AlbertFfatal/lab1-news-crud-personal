@@ -1,117 +1,82 @@
-lab1_Pogorely_A_K
-CRUD API для пользователей, новостей и комментариев
-Реализовано на FastAPI с использованием SQLAlchemy для работы с PostgreSQL и Alembic для миграций.
-Описание проекта
-Приложение представляет собой RESTful API для управления сущностями:
+## API Endpoints
 
-Пользователь (User)
-Новость (News)
-Комментарий (Comment)
+### Users
+- **POST** `/users/` — создать пользователя
+- **GET** `/users/` — список пользователей
+- **GET** `/users/{user_id}` — получить пользователя
+- **PUT** `/users/{user_id}` — обновить пользователя
+- **DELETE** `/users/{user_id}` — удалить пользователя
 
-Основные возможности:
+### News
+- **POST** `/news/` — создать новость (только для verified авторов)
+- **GET** `/news/` — список новостей
+- **GET** `/news/{news_id}` — получить новость
+- **PUT** `/news/{news_id}` — обновить новость
+- **DELETE** `/news/{news_id}` — удалить новость (с каскадным удалением комментариев)
 
-Полный CRUD для всех сущностей.
-Создание новостей доступно только пользователям с флагом is_author_verified = True.
-Каскадное удаление: при удалении пользователя или новости удаляются связанные комментарии.
-Хранение контента новости в формате JSON.
-Аватарка пользователя и обложка новости — строки (URL).
+### Comments
+- **POST** `/comments/` — создать комментарий
+- **GET** `/comments/` — список комментариев
+- **GET** `/comments/{comment_id}` — получить комментарий
+- **PUT** `/comments/{comment_id}` — обновить комментарий
+- **DELETE** `/comments/{comment_id}` — удалить комментарий
 
-Проектирование моделей
-Сущности и связи
+## Модели данных
 
-User:
-id (PK)
-name (str)
-email (str, unique)
-registration_date (datetime, auto)
-is_author_verified (bool, default=False)
-avatar (str, nullable)
+### User
+- id (PK)
+- name (str)
+- email (str, unique)
+- registration_date (datetime, auto)
+- is_author_verified (bool, default=False)
+- avatar (str, nullable — URL)
 
-News:
-id (PK)
-title (str)
-content (JSON)
-publication_date (datetime, auto)
-author_id (FK → User.id)
-cover (str, nullable)
+### News
+- id (PK)
+- title (str)
+- content (JSON)
+- publication_date (datetime, auto)
+- author_id (FK → User.id)
+- cover (str, nullable — URL)
 
-Comment:
-id (PK)
-text (str)
-news_id (FK → News.id)
-author_id (FK → User.id)
-publication_date (datetime, auto)
+### Comment
+- id (PK)
+- text (str)
+- news_id (FK → News.id)
+- author_id (FK → User.id)
+- publication_date (datetime, auto)
 
+**Связи**: каскадное удаление (удаление пользователя или новости удаляет связанные комментарии).
 
-Связи:
+## Запуск проекта
 
-User 1 → * News (автор новостей)
-User 1 → * Comment (автор комментариев)
-News 1 → * Comment (комментарии к новости)
+```bash
+# 1. Запуск PostgreSQL
+docker-compose up -d
 
-Каскадное удаление реализовано через cascade="all, delete-orphan" в отношениях.
-диаграмма моделей -
-textUser (id, name, email, registration_date, is_author_verified, avatar)
-├── 1 --- * News (id, title, content: JSON, publication_date, author_id, cover)
-│   └── 1 --- * Comment (id, text, news_id, author_id, publication_date)
-└── 1 --- * Comment (id, text, news_id, author_id, publication_date)
-Требования
+# 2. Применение миграций (таблицы + мок-данные)
+alembic upgrade head
 
-Python 3.10+
-PostgreSQL (через Docker)
-Библиотеки: FastAPI, Uvicorn, SQLAlchemy, Alembic, psycopg2-binary
+# 3. Запуск сервера
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-(см. requirements.txt)
-Запуск проекта
+Документация API доступна по адресу: http://127.0.0.1:8000/docs
 
-Клонируйте репозиторий и перейдите в папку проекта.
-Запустите PostgreSQL через Docker:docker-compose up -d
-Примените миграции (создание таблиц + мок-данные):alembic upgrade head
-Запустите сервер: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+## Примеры использования (curl)
 
-Примеры использования API (curl)
-Пользователи
-Список пользователей
+```cmd
+# Список пользователей (мок-данные)
 curl http://127.0.0.1:8000/users/
 
-# Получить пользователя по ID
-curl http://127.0.0.1:8000/users/1
-
 # Создать пользователя
-curl -X POST http://127.0.0.1:8000/users/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "New User", "email": "new@example.com", "is_author_verified": true}'
+curl -X POST http://127.0.0.1:8000/users/ -H "Content-Type: application/json" -d "{\"name\": \"Test User\", \"email\": \"test@example.com\"}"
 
-# Обновить пользователя
-curl -X PUT http://127.0.0.1:8000/users/1 \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Updated Name"}'
+# Создать новость (от verified author_id=1)
+curl -X POST http://127.0.0.1:8000/news/ -H "Content-Type: application/json" -d "{\"title\": \"Test News\", \"content\": {\"text\": \"Hello\"}, \"author_id\": 1}"
 
-# Удалить пользователя
-curl -X DELETE http://127.0.0.1:8000/users/1
-Новости
-Список новостей
-curl http://127.0.0.1:8000/news/
+# Попытка создания новости от неverified (403)
+curl -X POST http://127.0.0.1:8000/news/ -H "Content-Type: application/json" -d "{\"title\": \"Forbidden\", \"content\": {\"text\": \"No\"}, \"author_id\": 2}"
 
-# Создать новость (только verified author_id)
-curl -X POST http://127.0.0.1:8000/news/ \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Test News", "content": {"text": "Hello", "blocks": []}, "author_id": 1, "cover": "https://example.com/cover.jpg"}'
 
-# Попытка создания от неverified (403)
-curl -X POST http://127.0.0.1:8000/news/ \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Forbidden", "content": {"text": "No"}, "author_id": 2}'
-Комментарии
-Создать комментарий
-curl -X POST http://127.0.0.1:8000/comments/ \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Great!", "news_id": 1, "author_id": 2}'
-Миграции
-
-Первая миграция создаёт таблицы users, news, comments с индексами и FK.
-Вторая миграция добавляет мок-данные: 3 пользователя (1 verified), 5 новостей, несколько комментариев.
-
-Автор: Pogorely_Albert
-Февраль 2026
-Проект выполнен в рамках курса "Web программирование".
+Репозиторий готов к сдаче — удачи! 🎉
