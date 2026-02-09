@@ -1,6 +1,6 @@
 ## API Endpoints
 
-### Users
+###  Users
 - **POST** `/users/` — создать пользователя
 - **GET** `/users/` — список пользователей
 - **GET** `/users/{user_id}` — получить пользователя
