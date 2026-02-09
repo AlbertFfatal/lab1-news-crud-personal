@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from app.routers import user, news, comment
+from .routers import user, news, comment
+from .auth.router import router as auth_router
 
 app = FastAPI(
     title="News CRUD API",
@@ -10,6 +11,7 @@ app = FastAPI(
 app.include_router(user.router)
 app.include_router(news.router)
 app.include_router(comment.router)
+app.include_router(auth_router)
 
 @app.get("/")
 def root():
