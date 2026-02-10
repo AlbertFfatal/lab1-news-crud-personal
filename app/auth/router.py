@@ -6,25 +6,23 @@ from app.database import get_db
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token
 from app.config import settings
 from app.dependencies import get_current_user
+from app.cache import save_refresh_session, get_refresh_session, delete_refresh_session, get_user_sessions
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
-from schemas import UserRegister, UserLogin
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# GitHub SSO (локальный тест с allow_insecure_http=True)
 github_sso = GithubSSO(
     client_id=settings.GITHUB_CLIENT_ID,
     client_secret=settings.GITHUB_CLIENT_SECRET,
     redirect_uri="http://localhost:8000/auth/github/callback",
-    allow_insecure_http=True  # для локального теста
+    allow_insecure_http=True  #
 )
 
 # Local register
-# Local register
 @router.post("/register")
-def register(user_create: UserRegister, db: Session = Depends(get_db)):
+def register(user_create: schemas.UserRegister, db: Session = Depends(get_db)):
     if crud.get_user_by_email(db, user_create.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = hash_password(user_create.password)
@@ -43,21 +41,20 @@ def register(user_create: UserRegister, db: Session = Depends(get_db)):
 
 # Local login
 @router.post("/login")
-def login(user_login: UserLogin, db: Session = Depends(get_db), request: Request = None):
+def login(user_login: schemas.UserLogin, db: Session = Depends(get_db), request: Request = None):
     user = crud.get_user_by_email(db, user_login.email)
     if not user or not verify_password(user_login.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = create_refresh_token({"sub": str(user.id)})
     user_agent = request.headers.get("user-agent", "unknown") if request else "unknown"
-    refresh_session = models.RefreshSession(
-        user_id=user.id,
+
+    save_refresh_session(
         refresh_token=refresh_token,
+        user_id=user.id,
         user_agent=user_agent,
         expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
-    db.add(refresh_session)
-    db.commit()
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 # GitHub OAuth
 @router.get("/github/login")
@@ -82,36 +79,32 @@ async def github_callback(request: Request, db: Session = Depends(get_db)):
         db.refresh(db_user)
     access_token = create_access_token({"sub": str(db_user.id)})
     refresh_token = create_refresh_token({"sub": str(db_user.id)})
-    refresh_session = models.RefreshSession(
-        user_id=db_user.id,
+    user_agent = request.headers.get("user-agent", "unknown")
+    save_refresh_session(
         refresh_token=refresh_token,
-        user_agent=request.headers.get("user-agent", "unknown"),
+        user_id= db_user.id,
+        user_agent=user_agent,
         expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
-    db.add(refresh_session)
-    db.commit()
+
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 # Refresh
 @router.post("/refresh")
 def refresh(refresh_token: str, db: Session = Depends(get_db)):
-    session = db.query(models.RefreshSession).filter(models.RefreshSession.refresh_token == refresh_token).first()
-    if not session or session.expires_at < datetime.utcnow():
+    session_data = get_refresh_session(refresh_token)
+    if not session_data or datetime.fromisoformat(session_data["expires_at"]) < datetime.utcnow():
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
-    access_token = create_access_token({"sub": str(session.user_id)})
+    access_token = create_access_token({"sub": str(session_data["user_id"])})
     return {"access_token": access_token, "token_type": "bearer"}
 
 # Logout
 @router.post("/logout")
 def logout(refresh_token: str, db: Session = Depends(get_db)):
-    session = db.query(models.RefreshSession).filter(models.RefreshSession.refresh_token == refresh_token).first()
-    if session:
-        db.delete(session)
-        db.commit()
+    delete_refresh_session(refresh_token)
     return {"detail": "Logged out"}
 
 # Сессии пользователя
 @router.get("/sessions")
 def my_sessions(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    sessions = db.query(models.RefreshSession).filter(models.RefreshSession.user_id == current_user.id).all()
-    return [{"id": s.id, "user_agent": s.user_agent, "created_at": s.created_at, "expires_at": s.expires_at} for s in sessions]
+    return get_user_sessions(current_user.id)

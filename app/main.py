@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 from .routers import user, news, comment
 from .auth.router import router as auth_router
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 app = FastAPI(
     title="News CRUD API",
     description="CRUD для пользователей, новостей и комментариев",

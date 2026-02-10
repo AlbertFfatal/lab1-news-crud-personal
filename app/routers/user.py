@@ -5,6 +5,8 @@ from app.database import get_db
 from app.dependencies import get_current_user, admin_only
 from app.models import User as UserModel
 from app.dependencies import admin_only
+from crud import invalidate_user_cache
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 # Чтение открыто
@@ -31,6 +33,7 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
     user = crud.update_user(db, user_id, user_update)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    invalidate_user_cache(user_id)
     return user
 
 @router.delete("/{user_id}")
@@ -40,6 +43,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: UserM
     user = crud.delete_user(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    invalidate_user_cache(user_id)
     return {"detail": "User deleted"}
 
 # Админ может менять verified и admin флаги
@@ -49,6 +53,7 @@ def update_user_role(
     role_update: schemas.UserRoleUpdate,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(admin_only)
+
 ):
     user = crud.get_user(db, user_id)
     if not user:
