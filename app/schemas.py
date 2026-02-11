@@ -84,3 +84,7 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+class CommentCreateProtected(BaseModel):
+    text: str
+    news_id: int

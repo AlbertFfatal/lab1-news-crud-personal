@@ -15,7 +15,6 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Определяем таблицы
     users_table = sa.table('users',
         sa.column('id', sa.Integer),
         sa.column('name', sa.String),
@@ -41,15 +40,12 @@ def upgrade():
         sa.column('author_id', sa.Integer),
         sa.column('publication_date', sa.DateTime)
     )
-
-    # Пользователи (явно указываем avatar=None для тех, у кого нет)
     op.bulk_insert(users_table, [
         {"name": "Verified Author", "email": "author@example.com", "is_author_verified": True, "avatar": "https://example.com/avatar1.jpg"},
         {"name": "Regular User 1", "email": "user1@example.com", "is_author_verified": False, "avatar": None},
         {"name": "Regular User 2", "email": "user2@example.com", "is_author_verified": False, "avatar": None},
     ])
 
-    # Новости (cover=None где нет)
     op.bulk_insert(news_table, [
         {"title": "News 1", "content": {"text": "Content 1", "blocks": []}, "author_id": 1, "cover": "https://example.com/cover1.jpg"},
         {"title": "News 2", "content": {"text": "Content 2"}, "author_id": 1, "cover": None},
@@ -58,7 +54,6 @@ def upgrade():
         {"title": "News 5", "content": {"text": "Content 5"}, "author_id": 1, "cover": None},
     ])
 
-    # Комментарии (добавил больше для объёма)
     op.bulk_insert(comments_table, [
         {"text": "Great news!", "news_id": 1, "author_id": 2},
         {"text": "Thanks for sharing", "news_id": 1, "author_id": 3},

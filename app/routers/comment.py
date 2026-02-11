@@ -21,8 +21,14 @@ def read_comment(comment_id: int, db: Session = Depends(get_db)):
 
 # Создание — любой авторизованный
 @router.post("/", response_model=schemas.CommentOut)
-def create_comment(comment: schemas.CommentCreate, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
-    return crud.create_comment(db, comment)
+def create_comment(comment: schemas.CommentCreateProtected, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
+    # Добавляем author_id из токена
+    full_comment = schemas.CommentCreate(
+        text=comment.text,
+        news_id=comment.news_id,
+        author_id=current_user.id
+    )
+    return crud.create_comment(db, full_comment)
 
 # Обновление/удаление — owner or admin
 @router.put("/{comment_id}", response_model=schemas.CommentOut)
