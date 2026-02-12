@@ -78,5 +78,3 @@ curl -X POST http://127.0.0.1:8000/news/ -H "Content-Type: application/json" -d 
 # Попытка создания новости от неverified (403)
 curl -X POST http://127.0.0.1:8000/news/ -H "Content-Type: application/json" -d "{\"title\": \"Forbidden\", \"content\": {\"text\": \"No\"}, \"author_id\": 2}"
 
-
-Репозиторий готов к сдаче — удачи! 🎉
