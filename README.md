@@ -1,4 +1,4 @@
-# Lab2 News API (with Auth)
+# Lab3 News API (with Auth and cache)
 
 FastAPI приложение для новостного портала с авторизацией.
 
