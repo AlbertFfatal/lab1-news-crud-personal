@@ -1,7 +1,9 @@
+import re
+
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict
-
+from pydantic import EmailStr, validator
 class UserBase(BaseModel):
     name: str
     email: str
@@ -80,6 +82,18 @@ class UserRegister(BaseModel):
     is_author_verified: Optional[bool] = False
     is_admin: Optional[bool] = False
     avatar: Optional[str] = None
+
+    @validator('email')
+    def validate_email(cls, v):
+        if len(v) < 3 or len(v) > 32 or not re.match(r"^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", v):
+            raise ValueError("Invalid email format")
+        return v
+
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8 or not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", v):
+            raise ValueError("Invalid password format")
+        return v
 
 class UserLogin(BaseModel):
     email: str

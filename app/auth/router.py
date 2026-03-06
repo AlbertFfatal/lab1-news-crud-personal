@@ -9,7 +9,9 @@ from app.dependencies import get_current_user
 from app.cache import save_refresh_session, get_refresh_session, delete_refresh_session, get_user_sessions
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+import logging
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,8 +39,8 @@ def register(user_create: schemas.UserRegister, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    logger.info(f"User registered: {new_user.email}")
     return {"detail": "User registered"}
-
 # Local login
 @router.post("/login")
 def login(user_login: schemas.UserLogin, db: Session = Depends(get_db), request: Request = None):
